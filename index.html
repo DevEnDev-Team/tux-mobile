@@ -230,13 +230,27 @@
         });
 
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js')
-            .then((reg) => {
-              console.log('Service Worker enregistré !', reg.scope);
-              // Forcer la vérification de mise à jour au démarrage
-              reg.update();
-            })
-            .catch((err) => console.log('Échec de l\'enregistrement du Service Worker :', err));
+          // Nettoyer activement les anciennes versions de SW qui ne s'appellent pas sw-v16.js
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            const promises = registrations.map((registration) => {
+              const scriptURL = registration.active ? registration.active.scriptURL : (registration.installing ? registration.installing.scriptURL : '');
+              if (scriptURL && !scriptURL.includes('sw-v16.js')) {
+                console.log("Désinscription de l'ancien Service Worker :", scriptURL);
+                return registration.unregister();
+              }
+              return Promise.resolve();
+            });
+
+            Promise.all(promises).then(() => {
+              // Enregistrer le nouveau Service Worker versionné
+              navigator.serviceWorker.register('./sw-v16.js')
+                .then((reg) => {
+                  console.log('Service Worker v16 enregistré !', reg.scope);
+                  reg.update();
+                })
+                .catch((err) => console.log('Échec de l\'enregistrement du Service Worker :', err));
+            });
+          });
         });
       }
     }
