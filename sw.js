@@ -1,43 +1,20 @@
-const CACHE_NAME = 'tux-it-cache-v13';
+const CACHE_NAME = 'tux-it-cache-v14';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=13',
-  './app.js?v=13',
-  './manifest.json?v=13',
-  './logo.png?v=13',
+  './style.css?v=14',
+  './app.js?v=14',
+  './manifest.json?v=14',
+  './logo.png?v=14',
   './html5-qrcode.min.js'
 ];
 
 // Installation du Service Worker et mise en cache des ressources statiques
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      const cachePromises = ASSETS.map((asset) => {
-        // Pour les fichiers non versionnés (la racine ou index.html), on force le réseau avec un paramètre de cache-bust
-        if (asset === './' || asset === './index.html') {
-          const urlWithBust = asset === './' ? './?_cb=' + Date.now() : asset + '?_cb=' + Date.now();
-          return fetch(new Request(urlWithBust, { cache: 'reload' }))
-            .then((response) => {
-              if (!response.ok) {
-                throw new Error(`Le chargement de ${asset} a échoué avec le statut ${response.status}`);
-              }
-              // On enregistre sous la clé propre (sans le cache-bust)
-              return cache.put(asset, response);
-            });
-        } else {
-          // Pour les autres assets (déjà versionnés ou statiques tiers), on force le rechargement réseau direct
-          return fetch(new Request(asset, { cache: 'reload' }))
-            .then((response) => {
-              if (!response.ok) {
-                throw new Error(`Le chargement de ${asset} a échoué avec le statut ${response.status}`);
-              }
-              return cache.put(asset, response);
-            });
-        }
-      });
-      return Promise.all(cachePromises);
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -56,7 +33,7 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Interception des requêtes (Stratégie Cache-First stricte et ultra-robuste)
+// Interception des requêtes (Stratégie Mixte Network-First / Cache-First)
 self.addEventListener('fetch', (e) => {
   // Ne pas intercepter les requêtes qui ne sont pas en HTTP ou HTTPS
   if (!e.request.url.startsWith('http://') && !e.request.url.startsWith('https://')) {
@@ -68,10 +45,42 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      // Retourne le fichier en cache s'il correspond exactement à l'URL versionnée, sinon va sur le réseau
-      return cachedResponse || fetch(e.request);
-    })
-  );
+  const url = new URL(e.request.url);
+
+  // 1. STRATÉGIE NETWORK-FIRST pour la racine et index.html
+  // Garantit qu'en ligne, l'utilisateur a TOUJOURS le dernier index.html (et donc les bons v=XX)
+  if (url.pathname === '/' || url.pathname === '/index.html') {
+    e.respondWith(
+      fetch(e.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(e.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      }).catch(() => {
+        // En cas de panne réseau (hors-ligne), on sert la version du cache
+        return caches.match(e.request);
+      })
+    );
+  } else {
+    // 2. STRATÉGIE CACHE-FIRST pour les autres ressources statiques (déjà versionnées)
+    e.respondWith(
+      caches.match(e.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        return fetch(e.request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(e.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        });
+      })
+    );
+  }
 });
