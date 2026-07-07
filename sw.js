@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tux-it-cache-v7';
+const CACHE_NAME = 'tux-it-cache-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -13,7 +13,19 @@ const ASSETS = [
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+      // Forcer le téléchargement depuis le réseau sans utiliser le cache HTTP du navigateur
+      const cachePromises = ASSETS.map((asset) => {
+        const urlWithBust = asset === './' ? './?_cb=' + Date.now() : asset + '?_cb=' + Date.now();
+        return fetch(new Request(urlWithBust, { cache: 'reload' }))
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`Le chargement de l'asset ${asset} a échoué avec le statut ${response.status}`);
+            }
+            // On stocke la réponse dans le cache sous la clé d'origine propre (sans le cache-bust)
+            return cache.put(asset, response);
+          });
+      });
+      return Promise.all(cachePromises);
     }).then(() => self.skipWaiting())
   );
 });
