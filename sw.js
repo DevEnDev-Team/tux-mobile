@@ -1,20 +1,43 @@
-const CACHE_NAME = 'tux-it-cache-v12';
+const CACHE_NAME = 'tux-it-cache-v13';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=12',
-  './app.js?v=12',
-  './manifest.json?v=12',
-  './logo.png?v=12',
+  './style.css?v=13',
+  './app.js?v=13',
+  './manifest.json?v=13',
+  './logo.png?v=13',
   './html5-qrcode.min.js'
 ];
 
 // Installation du Service Worker et mise en cache des ressources statiques
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(ASSETS))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => {
+      const cachePromises = ASSETS.map((asset) => {
+        // Pour les fichiers non versionnés (la racine ou index.html), on force le réseau avec un paramètre de cache-bust
+        if (asset === './' || asset === './index.html') {
+          const urlWithBust = asset === './' ? './?_cb=' + Date.now() : asset + '?_cb=' + Date.now();
+          return fetch(new Request(urlWithBust, { cache: 'reload' }))
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`Le chargement de ${asset} a échoué avec le statut ${response.status}`);
+              }
+              // On enregistre sous la clé propre (sans le cache-bust)
+              return cache.put(asset, response);
+            });
+        } else {
+          // Pour les autres assets (déjà versionnés ou statiques tiers), on force le rechargement réseau direct
+          return fetch(new Request(asset, { cache: 'reload' }))
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`Le chargement de ${asset} a échoué avec le statut ${response.status}`);
+              }
+              return cache.put(asset, response);
+            });
+        }
+      });
+      return Promise.all(cachePromises);
+    }).then(() => self.skipWaiting())
   );
 });
 
