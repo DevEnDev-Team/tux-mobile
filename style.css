@@ -497,25 +497,26 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  padding-bottom: 8px;
+  padding: 8px 4px;
   overflow-x: auto;
+  align-items: center;
 }
 
 .color-btn {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  border: 2px solid transparent;
+  border: none;
   cursor: pointer;
   flex-shrink: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .color-btn.selected {
-  border-color: #121212;
+  box-shadow: 0 0 0 3px var(--btn-color), 0 0 0 5px var(--dark-color);
   transform: scale(1.1);
 }
 

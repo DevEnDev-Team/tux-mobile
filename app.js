@@ -200,6 +200,11 @@ function generateColorSelector() {
     btn.className = 'color-btn';
     btn.style.backgroundColor = color;
     btn.dataset.color = color;
+    
+    // Définir la couleur et sa variante plus sombre pour le ring
+    btn.style.setProperty('--btn-color', color);
+    btn.style.setProperty('--dark-color', darkenColor(color, 25)); // 25% plus sombre
+    
     btn.addEventListener('click', () => selectEditorColor(color));
     container.appendChild(btn);
   });
@@ -559,6 +564,20 @@ function getEditableHtml(htmlContent) {
     console.error("Erreur de parsing HTML", e);
     return htmlContent;
   }
+}
+
+function darkenColor(hex, percent) {
+  let num = parseInt(hex.replace("#", ""), 16),
+      amt = Math.round(2.55 * percent),
+      R = (num >> 16) - amt,
+      G = (num >> 8 & 0x00FF) - amt,
+      B = (num & 0x0000FF) - amt;
+  
+  R = R < 0 ? 0 : R > 255 ? 255 : R;
+  G = G < 0 ? 0 : G > 255 ? 255 : G;
+  B = B < 0 ? 0 : B > 255 ? 255 : B;
+  
+  return "#" + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
 }
 
 function getNoteTitle(text) {
