@@ -10,22 +10,22 @@
   <meta name="theme-color" content="#7c4dff">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="logo.png?v=16">
-  <link rel="manifest" href="manifest.json?v=16">
+  <link rel="apple-touch-icon" href="logo.png?v=18">
+  <link rel="manifest" href="manifest.json?v=18">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="stylesheet" href="style.css?v=18">
 </head>
 <body>
 
   <!-- Écran de chargement initial -->
   <div id="splashScreen" class="splash-screen">
     <div class="splash-content">
-      <img src="logo.png?v=16" alt="Tux-It Logo" class="splash-logo">
+      <img src="logo.png?v=18" alt="Tux-It Logo" class="splash-logo">
       <h1 class="splash-title">Tux-It</h1>
       <div class="spinner"></div>
     </div>
@@ -37,10 +37,27 @@
     <!-- En-tête -->
     <header class="app-header">
       <div class="header-left">
-        <img src="logo.png?v=16" alt="Logo" class="header-logo">
+        <img src="logo.png?v=18" alt="Logo" class="header-logo">
         <span class="header-title">Tux-It</span>
       </div>
       <div class="header-right">
+        <!-- Thème Toggle -->
+        <button id="themeToggleBtn" class="icon-btn" title="Changer de thème">
+          <svg class="icon-svg moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+          <svg class="icon-svg sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
         <!-- Statut de synchronisation (Nuage) -->
         <button id="syncStatusBtn" class="icon-btn sync-offline" title="Statut de synchronisation">
           <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -197,10 +214,10 @@
 
   <!-- Scripts -->
   <script src="html5-qrcode.min.js"></script>
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=18"></script>
   <script>
     // Version applicative pour forcer le nettoyage du Service Worker si elle change
-    const APP_VERSION = '16';
+    const APP_VERSION = '18';
 
     if ('serviceWorker' in navigator) {
       const savedVersion = localStorage.getItem('tux_it_version');
@@ -230,11 +247,11 @@
         });
 
         window.addEventListener('load', () => {
-          // Nettoyer activement les anciennes versions de SW qui ne s'appellent pas sw-v16.js
+          // Nettoyer activement les anciennes versions de SW qui ne s'appellent pas sw-v18.js
           navigator.serviceWorker.getRegistrations().then((registrations) => {
             const promises = registrations.map((registration) => {
               const scriptURL = registration.active ? registration.active.scriptURL : (registration.installing ? registration.installing.scriptURL : '');
-              if (scriptURL && !scriptURL.includes('sw-v16.js')) {
+              if (scriptURL && !scriptURL.includes('sw-v18.js')) {
                 console.log("Désinscription de l'ancien Service Worker :", scriptURL);
                 return registration.unregister();
               }
@@ -243,9 +260,9 @@
 
             Promise.all(promises).then(() => {
               // Enregistrer le nouveau Service Worker versionné
-              navigator.serviceWorker.register('./sw-v16.js')
+              navigator.serviceWorker.register('./sw-v18.js')
                 .then((reg) => {
-                  console.log('Service Worker v16 enregistré !', reg.scope);
+                  console.log('Service Worker v18 enregistré !', reg.scope);
                   reg.update();
                 })
                 .catch((err) => console.log('Échec de l\'enregistrement du Service Worker :', err));

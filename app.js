@@ -21,7 +21,9 @@ const COLORS = [
 
 // --- Initialisation ---
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   loadLocalData();
+  checkAccessRequirement();
   setupUIEventListeners();
   generateColorSelector();
   
@@ -189,6 +191,12 @@ function setupUIEventListeners() {
   // Scanner QR Code
   document.getElementById('startQrScanBtn').addEventListener('click', startQrScan);
   document.getElementById('stopQrScanBtn').addEventListener('click', stopQrScan);
+
+  // Changement de thème
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', toggleTheme);
+  }
 }
 
 function generateColorSelector() {
@@ -323,16 +331,12 @@ function deleteActiveNote() {
 
 // --- Paramètres ---
 function openSettings() {
-  document.getElementById('syncEnable').checked = syncConfig.enabled;
+  document.getElementById('syncEnable').checked = true;
   document.getElementById('serverUrl').value = syncConfig.serverUrl || '';
   document.getElementById('apiKey').value = syncConfig.apiKey || '';
   
   const fields = document.getElementById('syncFields');
-  if (syncConfig.enabled) {
-    fields.classList.add('visible');
-  } else {
-    fields.classList.remove('visible');
-  }
+  fields.classList.add('visible');
   
   // Mettre à jour les diagnostics
   updateDiagnostics();
@@ -341,6 +345,9 @@ function openSettings() {
 }
 
 function closeSettings() {
+  if (document.body.classList.contains('needs-activation')) {
+    return;
+  }
   stopQrScan();
   document.getElementById('settingsModal').classList.remove('active');
 }
@@ -348,23 +355,15 @@ function closeSettings() {
 function handleSettingsSubmit(e) {
   e.preventDefault();
   
-  syncConfig.enabled = document.getElementById('syncEnable').checked;
-  syncConfig.serverUrl = document.getElementById('serverUrl').value.trim();
-  syncConfig.apiKey = document.getElementById('apiKey').value.trim();
+  const url = document.getElementById('serverUrl').value.trim();
+  const key = document.getElementById('apiKey').value.trim();
   
-  // Normaliser l'URL du serveur (retirer le slash de fin)
-  if (syncConfig.serverUrl.endsWith('/')) {
-    syncConfig.serverUrl = syncConfig.serverUrl.slice(0, -1);
+  if (!url || !key) {
+    alert("Veuillez renseigner l'URL du serveur et la clé d'API.");
+    return;
   }
   
-  saveSyncConfig();
-  initSync();
-  closeSettings();
-  
-  if (syncConfig.enabled) {
-    updateSyncStatus('progress');
-    triggerSync();
-  }
+  validateAndSaveConfig(url, key);
 }
 
 function updateDiagnostics() {
@@ -649,22 +648,15 @@ function startQrScan() {
         url = url.slice(0, -1);
       }
       
-      // Mettre à jour l'UI et la config
+      // Mettre à jour l'UI
       document.getElementById('serverUrl').value = url;
       document.getElementById('apiKey').value = key;
-      document.getElementById('syncEnable').checked = true;
-      document.getElementById('syncFields').classList.add('visible');
       
-      syncConfig.enabled = true;
-      syncConfig.serverUrl = url;
-      syncConfig.apiKey = key;
-      
-      saveSyncConfig();
-      initSync();
-      stopQrScan();
-      
-      // Petit message visuel
-      alert("Configuration de synchronisation importée avec succès !");
+      validateAndSaveConfig(url, key).then(success => {
+        if (success) {
+          stopQrScan();
+        }
+      });
     } catch (e) {
       console.error(e);
       alert("QR Code de synchronisation invalide.");
@@ -706,5 +698,103 @@ function stopQrScan() {
       html5QrCodeScanner.clear();
       html5QrCodeScanner = null;
     }
+  }
+}
+
+// --- Gestion du Thème (Light / Dark) ---
+function initTheme() {
+  const savedTheme = localStorage.getItem('tux_it_theme') || 'dark';
+  applyTheme(savedTheme);
+}
+
+function applyTheme(theme) {
+  const body = document.body;
+  const sunIcon = document.querySelector('#themeToggleBtn .sun-icon');
+  const moonIcon = document.querySelector('#themeToggleBtn .moon-icon');
+  
+  if (theme === 'light') {
+    body.classList.add('light-theme');
+    if (sunIcon && moonIcon) {
+      sunIcon.style.display = 'block';
+      moonIcon.style.display = 'none';
+    }
+  } else {
+    body.classList.remove('light-theme');
+    if (sunIcon && moonIcon) {
+      sunIcon.style.display = 'none';
+      moonIcon.style.display = 'block';
+    }
+  }
+}
+
+function toggleTheme() {
+  const currentTheme = document.body.classList.contains('light-theme') ? 'light' : 'dark';
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  localStorage.setItem('tux_it_theme', newTheme);
+  applyTheme(newTheme);
+}
+
+// --- Sécurité et Validation de la Clé d'API ---
+function checkAccessRequirement() {
+  if (!syncConfig.apiKey || !syncConfig.serverUrl) {
+    document.body.classList.add('needs-activation');
+    openSettings();
+  } else {
+    document.body.classList.remove('needs-activation');
+  }
+}
+
+async function validateAndSaveConfig(url, key) {
+  // Normaliser l'URL (retirer le slash de fin)
+  if (url.endsWith('/')) {
+    url = url.slice(0, -1);
+  }
+  
+  const statusEl = document.getElementById('diagStatus');
+  if (statusEl) {
+    statusEl.innerText = "Validation en cours...";
+    statusEl.style.color = "var(--text-secondary)";
+  }
+  
+  try {
+    const response = await fetch(`${url}/notes`, {
+      headers: {
+        'Authorization': `Bearer ${key}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error("Accès refusé ou serveur indisponible (statut : " + response.status + ")");
+    }
+    
+    // Si OK, on sauvegarde la config
+    syncConfig.enabled = true;
+    syncConfig.serverUrl = url;
+    syncConfig.apiKey = key;
+    
+    saveSyncConfig();
+    
+    // Retirer le lock
+    document.body.classList.remove('needs-activation');
+    
+    // Fermer la modale (closeSettings vérifie la présence de needs-activation, qu'on vient d'enlever)
+    document.body.classList.remove('needs-activation'); // just to be sure
+    stopQrScan();
+    document.getElementById('settingsModal').classList.remove('active');
+    
+    // Lancer la synchro complète
+    initSync();
+    
+    alert("Configuration validée ! Bienvenue sur Tux-It.");
+    return true;
+  } catch (error) {
+    console.error("Erreur de validation de la synchro:", error);
+    alert("Échec de la validation : " + error.message);
+    
+    if (statusEl) {
+      statusEl.innerText = "Validation échouée";
+      statusEl.style.color = "#f44336";
+    }
+    return false;
   }
 }
