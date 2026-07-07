@@ -41,7 +41,7 @@ self.addEventListener('fetch', (e) => {
   }
 
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
+    caches.match(e.request, { ignoreSearch: true }).then((cachedResponse) => {
       if (cachedResponse) {
         // Retourner la version en cache, et mettre à jour en arrière-plan (Stale-While-Revalidate)
         fetch(e.request).then((networkResponse) => {
