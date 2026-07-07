@@ -1,32 +1,20 @@
-const CACHE_NAME = 'tux-it-cache-v8';
+const CACHE_NAME = 'tux-it-cache-v12';
 const ASSETS = [
   './',
   './index.html',
-  './style.css',
-  './app.js',
-  './manifest.json',
-  './logo.png',
+  './style.css?v=12',
+  './app.js?v=12',
+  './manifest.json?v=12',
+  './logo.png?v=12',
   './html5-qrcode.min.js'
 ];
 
 // Installation du Service Worker et mise en cache des ressources statiques
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      // Forcer le téléchargement depuis le réseau sans utiliser le cache HTTP du navigateur
-      const cachePromises = ASSETS.map((asset) => {
-        const urlWithBust = asset === './' ? './?_cb=' + Date.now() : asset + '?_cb=' + Date.now();
-        return fetch(new Request(urlWithBust, { cache: 'reload' }))
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(`Le chargement de l'asset ${asset} a échoué avec le statut ${response.status}`);
-            }
-            // On stocke la réponse dans le cache sous la clé d'origine propre (sans le cache-bust)
-            return cache.put(asset, response);
-          });
-      });
-      return Promise.all(cachePromises);
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -45,25 +33,22 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Interception des requêtes
+// Interception des requêtes (Stratégie Cache-First stricte et ultra-robuste)
 self.addEventListener('fetch', (e) => {
+  // Ne pas intercepter les requêtes qui ne sont pas en HTTP ou HTTPS
+  if (!e.request.url.startsWith('http://') && !e.request.url.startsWith('https://')) {
+    return;
+  }
+
   // Ne pas intercepter les requêtes API vers le serveur de synchronisation
   if (e.request.url.includes('/api/')) {
     return;
   }
 
   e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Retourner la version en cache, et mettre à jour en arrière-plan (Stale-While-Revalidate)
-        fetch(e.request).then((networkResponse) => {
-          if (networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, networkResponse));
-          }
-        }).catch(() => {/* Ignorer l'erreur si hors ligne */});
-        return cachedResponse;
-      }
-      return fetch(e.request);
+    caches.match(e.request).then((cachedResponse) => {
+      // Retourne le fichier en cache s'il correspond exactement à l'URL versionnée, sinon va sur le réseau
+      return cachedResponse || fetch(e.request);
     })
   );
 });

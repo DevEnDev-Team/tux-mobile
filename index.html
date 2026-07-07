@@ -10,22 +10,22 @@
   <meta name="theme-color" content="#7c4dff">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="logo.png?v=8">
-  <link rel="manifest" href="manifest.json?v=8">
+  <link rel="apple-touch-icon" href="logo.png?v=12">
+  <link rel="manifest" href="manifest.json?v=12">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
 
   <!-- Écran de chargement initial -->
   <div id="splashScreen" class="splash-screen">
     <div class="splash-content">
-      <img src="logo.png?v=8" alt="Tux-It Logo" class="splash-logo">
+      <img src="logo.png?v=12" alt="Tux-It Logo" class="splash-logo">
       <h1 class="splash-title">Tux-It</h1>
       <div class="spinner"></div>
     </div>
@@ -37,7 +37,7 @@
     <!-- En-tête -->
     <header class="app-header">
       <div class="header-left">
-        <img src="logo.png?v=8" alt="Logo" class="header-logo">
+        <img src="logo.png?v=12" alt="Logo" class="header-logo">
         <span class="header-title">Tux-It</span>
       </div>
       <div class="header-right">
@@ -197,28 +197,26 @@
 
   <!-- Scripts -->
   <script src="html5-qrcode.min.js"></script>
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=12"></script>
   <script>
     // Enregistrement du Service Worker pour la PWA
     if ('serviceWorker' in navigator) {
+      // Détecter quand le nouveau service worker prend le contrôle et recharger la page
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          console.log('Nouveau Service Worker activé et aux commandes. Rechargement...');
+          window.location.reload();
+        }
+      });
+
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
           .then((reg) => {
             console.log('Service Worker enregistré !', reg.scope);
-            
-            // Forcer le Service Worker à vérifier immédiatement s'il y a une mise à jour
+            // Forcer la vérification de mise à jour au démarrage
             reg.update();
-            
-            // Détecter les mises à jour et recharger
-            reg.addEventListener('updatefound', () => {
-              const newWorker = reg.installing;
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('Nouveau Service Worker installé, rechargement de la page...');
-                  window.location.reload();
-                }
-              });
-            });
           })
           .catch((err) => console.log('Échec de l\'enregistrement du Service Worker :', err));
       });
