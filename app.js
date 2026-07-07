@@ -1,0 +1,563 @@
+// --- State & Config ---
+let notes = [];
+let activeNote = null;
+let syncConfig = {
+  enabled: false,
+  serverUrl: '',
+  apiKey: ''
+};
+let syncIntervalId = null;
+
+// Palette de couleurs disponibles
+const COLORS = [
+  '#fff59d', // Jaune
+  '#a5d6a7', // Vert
+  '#90caf9', // Bleu
+  '#f48fb1', // Rose
+  '#ce93d8', // Violet
+  '#ffcc80'  // Orange
+];
+
+// --- Initialisation ---
+document.addEventListener('DOMContentLoaded', () => {
+  loadLocalData();
+  setupUIEventListeners();
+  generateColorSelector();
+  
+  // Cacher le splash screen après 1 seconde
+  setTimeout(() => {
+    const splash = document.getElementById('splashScreen');
+    splash.classList.add('fade-out');
+  }, 1000);
+
+  // Lancer la première synchronisation et le timer
+  initSync();
+  renderNotes();
+});
+
+// --- Gestion des données locales ---
+function loadLocalData() {
+  // Charger les notes
+  const localNotes = localStorage.getItem('tux_it_notes');
+  if (localNotes) {
+    try {
+      notes = JSON.parse(localNotes);
+    } catch (e) {
+      console.error("Erreur de parsing des notes locales", e);
+      notes = [];
+    }
+  }
+
+  // Charger la config de synchro
+  const localConfig = localStorage.getItem('tux_it_sync_config');
+  if (localConfig) {
+    try {
+      syncConfig = JSON.parse(localConfig);
+    } catch (e) {
+      console.error("Erreur de parsing de la config de synchro", e);
+    }
+  }
+
+  // Si on est sur le serveur Go directement, on peut auto-remplir l'URL du serveur si vide
+  if (!syncConfig.serverUrl) {
+    syncConfig.serverUrl = window.location.origin;
+  }
+}
+
+function saveLocalNotes() {
+  localStorage.setItem('tux_it_notes', JSON.stringify(notes));
+}
+
+function saveSyncConfig() {
+  localStorage.setItem('tux_it_sync_config', JSON.stringify(syncConfig));
+}
+
+// --- Rendu de l'Interface ---
+function renderNotes() {
+  const grid = document.getElementById('notesGrid');
+  const emptyState = document.getElementById('emptyState');
+  const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+  
+  grid.innerHTML = '';
+  
+  // Filtrer les notes actives (non archivées et non supprimées)
+  let filtered = notes.filter(n => !n.archived && !n.trashed);
+  
+  // Appliquer le filtre de recherche si saisi
+  if (searchQuery) {
+    filtered = filtered.filter(n => {
+      const contentText = getPlainText(n.content).toLowerCase();
+      return contentText.includes(searchQuery);
+    });
+  }
+  
+  if (filtered.length === 0) {
+    emptyState.style.display = 'flex';
+    grid.style.display = 'none';
+  } else {
+    emptyState.style.display = 'none';
+    grid.style.display = 'grid';
+    
+    // Trier par date de modification décroissante
+    filtered.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
+    
+    filtered.forEach(note => {
+      const card = createNoteCard(note);
+      grid.appendChild(card);
+    });
+  }
+}
+
+function createNoteCard(note) {
+  const card = document.createElement('div');
+  card.className = 'note-card';
+  card.style.backgroundColor = note.color || '#fff59d';
+  card.dataset.id = note.id;
+  
+  const text = getPlainText(note.content);
+  const title = getNoteTitle(text) || 'Sans titre';
+  const preview = getNotePreview(text, title);
+  const dateStr = formatDate(note.lastModified);
+  
+  card.innerHTML = `
+    <h4 class="note-card-title">${escapeHtml(title)}</h4>
+    <p class="note-card-preview">${escapeHtml(preview)}</p>
+    <div class="note-card-footer">
+      <span>${dateStr}</span>
+      ${note.synced === false ? `
+        <svg class="note-card-sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.42-1.04-1.29-2.15-2.5-2.5-3.02-.89-6.13 1.15-6.5 4.5A4.5 4.5 0 0 0 7.5 22h10z"/>
+        </svg>
+      ` : ''}
+    </div>
+  `;
+  
+  card.addEventListener('click', () => openEditor(note));
+  return card;
+}
+
+// --- Événements UI ---
+function setupUIEventListeners() {
+  // Recherche
+  document.getElementById('searchInput').addEventListener('input', renderNotes);
+  
+  // Bouton flottant (Nouvelle note)
+  document.getElementById('fabNewNote').addEventListener('click', createNewNote);
+  
+  // Boutons de fermeture
+  document.getElementById('editorCloseBtn').addEventListener('click', closeEditor);
+  document.getElementById('settingsCloseBtn').addEventListener('click', closeSettings);
+  
+  // Bouton de sauvegarde de l'éditeur
+  document.getElementById('editorSaveBtn').addEventListener('click', saveActiveNote);
+  
+  // Bouton de suppression de l'éditeur
+  document.getElementById('editorDeleteBtn').addEventListener('click', deleteActiveNote);
+  
+  // Bouton des paramètres
+  document.getElementById('settingsBtn').addEventListener('click', openSettings);
+  
+  // Formulaire des paramètres
+  document.getElementById('settingsForm').addEventListener('submit', handleSettingsSubmit);
+  
+  // Toggle de synchro
+  document.getElementById('syncEnable').addEventListener('change', (e) => {
+    const fields = document.getElementById('syncFields');
+    if (e.target.checked) {
+      fields.classList.add('visible');
+    } else {
+      fields.classList.remove('visible');
+    }
+  });
+
+  // Forcer la synchro au clic sur le nuage
+  document.getElementById('syncStatusBtn').addEventListener('click', () => {
+    if (syncConfig.enabled) {
+      updateSyncStatus('progress');
+      triggerSync();
+    } else {
+      openSettings();
+    }
+  });
+}
+
+function generateColorSelector() {
+  const container = document.getElementById('colorSelector');
+  container.innerHTML = '';
+  
+  COLORS.forEach(color => {
+    const btn = document.createElement('button');
+    btn.className = 'color-btn';
+    btn.style.backgroundColor = color;
+    btn.dataset.color = color;
+    btn.addEventListener('click', () => selectEditorColor(color));
+    container.appendChild(btn);
+  });
+}
+
+// --- Logique de l'Éditeur ---
+function openEditor(note) {
+  activeNote = { ...note };
+  const modal = document.getElementById('editorModal');
+  const textarea = document.getElementById('noteTextarea');
+  const sheet = modal.querySelector('.bottom-sheet');
+  
+  textarea.value = getPlainText(activeNote.content);
+  sheet.style.backgroundColor = activeNote.color;
+  
+  // Activer la couleur sélectionnée dans la palette
+  updatePaletteSelection(activeNote.color);
+  
+  modal.classList.add('active');
+}
+
+function closeEditor() {
+  document.getElementById('editorModal').classList.remove('active');
+  activeNote = null;
+}
+
+function selectEditorColor(color) {
+  if (activeNote) {
+    activeNote.color = color;
+    const modal = document.getElementById('editorModal');
+    modal.querySelector('.bottom-sheet').style.backgroundColor = color;
+    updatePaletteSelection(color);
+  }
+}
+
+function updatePaletteSelection(selectedColor) {
+  const buttons = document.querySelectorAll('.color-btn');
+  buttons.forEach(btn => {
+    if (btn.dataset.color.toLowerCase() === selectedColor.toLowerCase()) {
+      btn.classList.add('selected');
+    } else {
+      btn.classList.remove('selected');
+    }
+  });
+}
+
+function createNewNote() {
+  const newNote = {
+    id: generateUuid(),
+    content: "",
+    x: 100,
+    y: 100,
+    width: 250,
+    height: 250,
+    color: COLORS[0], // Jaune par défaut
+    alwaysOnTop: false,
+    opacity: 1.0,
+    locked: false,
+    favorite: false,
+    archived: false,
+    trashed: false,
+    lastModified: new Date().toISOString(),
+    created: new Date().toISOString(),
+    tags: [],
+    synced: false
+  };
+  
+  openEditor(newNote);
+}
+
+function saveActiveNote() {
+  if (!activeNote) return;
+  
+  const text = document.getElementById('noteTextarea').value;
+  activeNote.content = text; // Stockage en texte plat (converti ou non, le client desktop Qt6 supporte le texte brut)
+  activeNote.lastModified = new Date().toISOString();
+  activeNote.synced = false;
+  
+  const index = notes.findIndex(n => n.id === activeNote.id);
+  if (index !== -1) {
+    notes[index] = activeNote;
+  } else {
+    notes.push(activeNote);
+  }
+  
+  saveLocalNotes();
+  renderNotes();
+  closeEditor();
+  
+  if (syncConfig.enabled) {
+    triggerSync();
+  }
+}
+
+function deleteActiveNote() {
+  if (!activeNote) return;
+  
+  if (confirm("Voulez-vous vraiment supprimer cette note ?")) {
+    const index = notes.findIndex(n => n.id === activeNote.id);
+    if (index !== -1) {
+      // Pour une suppression simple et synchro, on retire de la liste
+      notes.splice(index, 1);
+      saveLocalNotes();
+      renderNotes();
+      closeEditor();
+      
+      if (syncConfig.enabled) {
+        triggerSync();
+      }
+    }
+  }
+}
+
+// --- Paramètres ---
+function openSettings() {
+  document.getElementById('syncEnable').checked = syncConfig.enabled;
+  document.getElementById('serverUrl').value = syncConfig.serverUrl || '';
+  document.getElementById('apiKey').value = syncConfig.apiKey || '';
+  
+  const fields = document.getElementById('syncFields');
+  if (syncConfig.enabled) {
+    fields.classList.add('visible');
+  } else {
+    fields.classList.remove('visible');
+  }
+  
+  // Mettre à jour les diagnostics
+  updateDiagnostics();
+  
+  document.getElementById('settingsModal').classList.add('active');
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('active');
+}
+
+function handleSettingsSubmit(e) {
+  e.preventDefault();
+  
+  syncConfig.enabled = document.getElementById('syncEnable').checked;
+  syncConfig.serverUrl = document.getElementById('serverUrl').value.trim();
+  syncConfig.apiKey = document.getElementById('apiKey').value.trim();
+  
+  // Normaliser l'URL du serveur (retirer le slash de fin)
+  if (syncConfig.serverUrl.endsWith('/')) {
+    syncConfig.serverUrl = syncConfig.serverUrl.slice(0, -1);
+  }
+  
+  saveSyncConfig();
+  initSync();
+  closeSettings();
+  
+  if (syncConfig.enabled) {
+    updateSyncStatus('progress');
+    triggerSync();
+  }
+}
+
+function updateDiagnostics() {
+  const statusEl = document.getElementById('diagStatus');
+  const lastTimeEl = document.getElementById('diagLastTime');
+  
+  const lastSync = localStorage.getItem('tux_it_last_sync_time');
+  lastTimeEl.innerText = lastSync ? formatDate(lastSync) + ' ' + new Date(lastSync).toLocaleTimeString() : 'Jamais';
+  
+  if (!syncConfig.enabled) {
+    statusEl.innerText = 'Désactivé';
+    statusEl.style.color = 'var(--text-secondary)';
+  } else {
+    const lastResult = localStorage.getItem('tux_it_last_sync_result');
+    if (lastResult === 'success') {
+      statusEl.innerText = 'Connecté (OK)';
+      statusEl.style.color = '#4caf50';
+    } else if (lastResult === 'error') {
+      statusEl.innerText = 'Erreur de connexion';
+      statusEl.style.color = '#f44336';
+    } else {
+      statusEl.innerText = 'En attente...';
+      statusEl.style.color = '#ff9800';
+    }
+  }
+}
+
+// --- Synchronisation avec le Serveur Go ---
+function initSync() {
+  // Arrêter le timer précédent
+  if (syncIntervalId) {
+    clearInterval(syncIntervalId);
+    syncIntervalId = null;
+  }
+  
+  if (syncConfig.enabled && syncConfig.serverUrl && syncConfig.apiKey) {
+    updateSyncStatus('offline'); // Initialisé mais pas encore connecté
+    
+    // Déclencher une synchro
+    triggerSync();
+    
+    // Configurer le timer de synchronisation toutes les 15 secondes
+    syncIntervalId = setInterval(triggerSync, 15000);
+  } else {
+    updateSyncStatus('offline');
+  }
+}
+
+function updateSyncStatus(status) {
+  const btn = document.getElementById('syncStatusBtn');
+  btn.className = 'icon-btn'; // Reset
+  
+  switch (status) {
+    case 'online':
+      btn.classList.add('sync-online');
+      break;
+    case 'progress':
+      btn.classList.add('sync-progress');
+      break;
+    case 'error':
+      btn.classList.add('sync-error');
+      break;
+    case 'offline':
+    default:
+      btn.classList.add('sync-offline');
+      break;
+  }
+}
+
+function triggerSync() {
+  if (!syncConfig.enabled || !syncConfig.serverUrl || !syncConfig.apiKey) {
+    updateSyncStatus('offline');
+    return;
+  }
+  
+  updateSyncStatus('progress');
+  
+  const headers = {
+    'Authorization': `Bearer ${syncConfig.apiKey}`,
+    'Content-Type': 'application/json'
+  };
+  
+  // 1. Récupérer les notes distantes (GET)
+  fetch(`${syncConfig.serverUrl}/notes`, { headers })
+    .then(response => {
+      if (!response.ok) throw new Error("Accès refusé ou serveur indisponible");
+      return response.json();
+    })
+    .then(remoteNotes => {
+      // 2. Fusionner les notes locales et distantes
+      const merged = mergeNotes(notes, remoteNotes);
+      
+      // Indiquer si les notes locales ont changé après fusion
+      let hasLocalChanges = false;
+      if (merged.length !== notes.length) {
+        hasLocalChanges = true;
+      } else {
+        for (let i = 0; i < notes.length; i++) {
+          // Comparaison basique (id et lastModified)
+          const m = merged.find(n => n.id === notes[i].id);
+          if (!m || m.lastModified !== notes[i].lastModified) {
+            hasLocalChanges = true;
+            break;
+          }
+        }
+      }
+      
+      // Marquer toutes les notes fusionnées comme synchronisées localement
+      const syncedNotes = merged.map(n => ({ ...n, synced: true }));
+      
+      notes = syncedNotes;
+      saveLocalNotes();
+      
+      if (hasLocalChanges) {
+        renderNotes();
+      }
+      
+      // 3. Pousser le tableau fusionné sur le serveur (POST)
+      return fetch(`${syncConfig.serverUrl}/notes`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(syncedNotes)
+      });
+    })
+    .then(response => {
+      if (!response.ok) throw new Error("Erreur lors de l'envoi des données");
+      
+      // Synchro réussie !
+      updateSyncStatus('online');
+      localStorage.setItem('tux_it_last_sync_time', new Date().toISOString());
+      localStorage.setItem('tux_it_last_sync_result', 'success');
+      updateDiagnostics();
+    })
+    .catch(err => {
+      console.error("Erreur de synchronisation", err);
+      updateSyncStatus('error');
+      localStorage.setItem('tux_it_last_sync_result', 'error');
+      updateDiagnostics();
+    });
+}
+
+// Algorithme de fusion de notes (Le plus récent l'emporte)
+function mergeNotes(local, remote) {
+  const mergedMap = new Map();
+  
+  // Remplir avec les notes distantes
+  remote.forEach(n => {
+    mergedMap.set(n.id, n);
+  });
+  
+  // Fusionner avec les locales
+  local.forEach(l => {
+    const r = mergedMap.get(l.id);
+    if (!r) {
+      mergedMap.set(l.id, l); // Note uniquement locale
+    } else {
+      // Comparer les timestamps
+      const lDate = new Date(l.lastModified);
+      const rDate = new Date(r.lastModified);
+      if (lDate > rDate) {
+        mergedMap.set(l.id, l); // La locale est plus récente
+      }
+    }
+  });
+  
+  return Array.from(mergedMap.values());
+}
+
+// --- Utilitaires ---
+function generateUuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+function getPlainText(htmlContent) {
+  if (!htmlContent) return '';
+  // Remplacement basique du HTML (Qt6 C++ envoie du Rich Text). Si texte brut, retourne tel quel.
+  const temp = document.createElement('div');
+  temp.innerHTML = htmlContent;
+  return temp.textContent || temp.innerText || '';
+}
+
+function getNoteTitle(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  return lines[0].trim();
+}
+
+function getNotePreview(text, title) {
+  if (!text) return '';
+  // Retourner le texte restant après le titre
+  let preview = text.substring(title.length).trim();
+  return preview || '';
+}
+
+function formatDate(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+function escapeHtml(string) {
+  if (!string) return '';
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return string.replace(/[&<>"']/g, function(m) { return map[m]; });
+}

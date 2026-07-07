@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Tux-It - Vos Notes Mignonnes</title>
+  
+  <!-- SEO & PWA Meta -->
+  <meta name="description" content="Vos notes adhésives mignonnes synchronisées partout">
+  <meta name="theme-color" content="#7c4dff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="logo.png">
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Écran de chargement initial -->
+  <div id="splashScreen" class="splash-screen">
+    <div class="splash-content">
+      <img src="logo.png" alt="Tux-It Logo" class="splash-logo">
+      <h1 class="splash-title">Tux-It</h1>
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- Conteneur principal de l'application -->
+  <div class="app-container">
+    
+    <!-- En-tête -->
+    <header class="app-header">
+      <div class="header-left">
+        <img src="logo.png" alt="Logo" class="header-logo">
+        <span class="header-title">Tux-It</span>
+      </div>
+      <div class="header-right">
+        <!-- Statut de synchronisation (Nuage) -->
+        <button id="syncStatusBtn" class="icon-btn sync-offline" title="Statut de synchronisation">
+          <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.5 19A3.5 3.5 0 0 0 21 15.5c0-2.79-2.54-4.5-5-4.5-.42-1.04-1.29-2.15-2.5-2.5-3.02-.89-6.13 1.15-6.5 4.5A4.5 4.5 0 0 0 7.5 22h10z"/>
+          </svg>
+        </button>
+        <!-- Paramètres -->
+        <button id="settingsBtn" class="icon-btn" title="Configuration">
+          <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Barre de recherche -->
+    <div class="search-container">
+      <div class="search-wrapper">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Rechercher dans vos notes...">
+      </div>
+    </div>
+
+    <!-- Contenu des notes -->
+    <main class="notes-feed">
+      <div id="emptyState" class="empty-state">
+        <div class="empty-icon">🦊</div>
+        <h3>Aucune note pour le moment</h3>
+        <p>Touchez le bouton "+" en bas à droite pour créer votre première note.</p>
+      </div>
+      <div id="notesGrid" class="notes-grid">
+        <!-- Les notes seront injectées ici par JavaScript -->
+      </div>
+    </main>
+
+    <!-- Bouton flottant de création de note -->
+    <button id="fabNewNote" class="fab-btn" title="Nouvelle note">
+      <svg class="fab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Fiche d'édition / Bottom Sheet d'une note -->
+  <div id="editorModal" class="modal-overlay">
+    <div class="bottom-sheet">
+      <div class="sheet-header">
+        <button id="editorCloseBtn" class="sheet-action-btn">Fermer</button>
+        <span class="sheet-title">Éditer la note</span>
+        <button id="editorSaveBtn" class="sheet-action-btn primary">Enregistrer</button>
+      </div>
+      
+      <div class="sheet-body">
+        <textarea id="noteTextarea" placeholder="Écrivez votre note ici..."></textarea>
+        
+        <!-- Palette de couleurs -->
+        <div class="color-palette-label">Couleur de fond</div>
+        <div class="color-selector" id="colorSelector">
+          <!-- Les boutons de couleurs seront générés ici -->
+        </div>
+      </div>
+      
+      <div class="sheet-footer">
+        <button id="editorDeleteBtn" class="delete-btn">
+          <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          Supprimer cette note
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal des Paramètres de Synchronisation -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="settings-dialog">
+      <div class="dialog-header">
+        <h2>Configuration Synchro</h2>
+        <button id="settingsCloseBtn" class="icon-btn">
+          <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <form id="settingsForm">
+          <div class="form-group toggle-group">
+            <label for="syncEnable">Activer la synchronisation</label>
+            <input type="checkbox" id="syncEnable" class="toggle-input">
+          </div>
+          
+          <div id="syncFields" class="sync-fields">
+            <div class="form-group">
+              <label for="serverUrl">URL du serveur</label>
+              <input type="url" id="serverUrl" placeholder="http://192.168.1.100:8282" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="apiKey">Clé d'API</label>
+              <input type="text" id="apiKey" placeholder="Votre clé de synchronisation" required>
+            </div>
+          </div>
+          
+          <button type="submit" class="dialog-save-btn">Appliquer la configuration</button>
+        </form>
+        
+        <div id="syncDiagnostics" class="sync-diagnostics">
+          <h3>Statut de la connexion</h3>
+          <div class="diag-item">
+            <span>État global :</span>
+            <strong id="diagStatus">Déconnecté</strong>
+          </div>
+          <div class="diag-item">
+            <span>Dernière synchro :</span>
+            <span id="diagLastTime">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+  <script>
+    // Enregistrement du Service Worker pour la PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('Service Worker enregistré !', reg.scope))
+          .catch((err) => console.log('Échec de l\'enregistrement du Service Worker :', err));
+      });
+    }
+  </script>
+</body>
+</html>

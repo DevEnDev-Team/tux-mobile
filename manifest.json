@@ -1,0 +1,17 @@
+{
+  "name": "Tux-It Notes",
+  "short_name": "Tux-It",
+  "description": "Vos notes mignonnes et synchronisées partout.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1e1e24",
+  "theme_color": "#7c4dff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "logo.png",
+      "type": "image/png",
+      "sizes": "256x256"
+    }
+  ]
+}
