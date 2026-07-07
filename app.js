@@ -147,6 +147,15 @@ function setupUIEventListeners() {
   
   // Bouton de sauvegarde de l'éditeur
   document.getElementById('editorSaveBtn').addEventListener('click', saveActiveNote);
+
+  // Bouton de formatage gras
+  const boldBtn = document.getElementById('boldBtn');
+  if (boldBtn) {
+    boldBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      document.execCommand('bold', false, null);
+    });
+  }
   
   // Bouton de suppression de l'éditeur
   document.getElementById('editorDeleteBtn').addEventListener('click', deleteActiveNote);
@@ -203,7 +212,7 @@ function openEditor(note) {
   const textarea = document.getElementById('noteTextarea');
   const sheet = modal.querySelector('.bottom-sheet');
   
-  textarea.value = getPlainText(activeNote.content);
+  textarea.innerHTML = getEditableHtml(activeNote.content);
   sheet.style.backgroundColor = activeNote.color;
   
   // Activer la couleur sélectionnée dans la palette
@@ -264,8 +273,11 @@ function createNewNote() {
 function saveActiveNote() {
   if (!activeNote) return;
   
-  const text = document.getElementById('noteTextarea').value;
-  activeNote.content = text; // Stockage en texte plat (converti ou non, le client desktop Qt6 supporte le texte brut)
+  const textarea = document.getElementById('noteTextarea');
+  const htmlContent = textarea.innerHTML;
+  const textContent = textarea.innerText.trim();
+  
+  activeNote.content = textContent === "" ? "" : htmlContent;
   activeNote.lastModified = new Date().toISOString();
   activeNote.synced = false;
   
@@ -530,6 +542,23 @@ function getPlainText(htmlContent) {
   const temp = document.createElement('div');
   temp.innerHTML = htmlContent;
   return temp.textContent || temp.innerText || '';
+}
+
+function getEditableHtml(htmlContent) {
+  if (!htmlContent) return '';
+  // Si c'est du texte brut sans balises d'édition complexes, on remplace les sauts de ligne par des <br>
+  if (!htmlContent.includes('<html') && !htmlContent.includes('<body') && !htmlContent.includes('<p') && !htmlContent.includes('<span') && !htmlContent.includes('<div')) {
+    return htmlContent.replace(/\n/g, '<br>');
+  }
+  
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    return doc.body.innerHTML || htmlContent;
+  } catch (e) {
+    console.error("Erreur de parsing HTML", e);
+    return htmlContent;
+  }
 }
 
 function getNoteTitle(text) {
