@@ -1,11 +1,11 @@
-const CACHE_NAME = 'tux-it-cache-v14';
+const CACHE_NAME = 'tux-it-cache-v15';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=14',
-  './app.js?v=14',
-  './manifest.json?v=14',
-  './logo.png?v=14',
+  './style.css?v=15',
+  './app.js?v=15',
+  './manifest.json?v=15',
+  './logo.png?v=15',
   './html5-qrcode.min.js'
 ];
 
@@ -48,7 +48,6 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
   // 1. STRATÉGIE NETWORK-FIRST pour la racine et index.html
-  // Garantit qu'en ligne, l'utilisateur a TOUJOURS le dernier index.html (et donc les bons v=XX)
   if (url.pathname === '/' || url.pathname === '/index.html') {
     e.respondWith(
       fetch(e.request).then((networkResponse) => {
