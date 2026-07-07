@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tux-it-cache-v2';
+const CACHE_NAME = 'tux-it-cache-v3';
 const ASSETS = [
   './',
   './index.html',
