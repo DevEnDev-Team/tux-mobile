@@ -138,6 +138,23 @@
             <label for="syncEnable">Activer la synchronisation</label>
             <input type="checkbox" id="syncEnable" class="toggle-input">
           </div>
+
+          <!-- Section Scan QR Code -->
+          <div id="qrScanSection" class="qr-scan-section">
+            <button type="button" id="startQrScanBtn" class="qr-scan-btn">
+              <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
+              </svg>
+              Flasher un QR Code de Synchro
+            </button>
+            <div id="qrReaderContainer" style="display: none; margin-top: 12px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); padding: 8px; background: var(--bg-color);">
+              <div id="qrReader" style="width: 100%;"></div>
+              <button type="button" id="stopQrScanBtn" class="qr-scan-stop-btn">Annuler le scan</button>
+            </div>
+          </div>
           
           <div id="syncFields" class="sync-fields">
             <div class="form-group">
@@ -170,6 +187,7 @@
   </div>
 
   <!-- Scripts -->
+  <script src="html5-qrcode.min.js"></script>
   <script src="app.js"></script>
   <script>
     // Enregistrement du Service Worker pour la PWA

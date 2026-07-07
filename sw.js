@@ -5,7 +5,8 @@ const ASSETS = [
   './style.css',
   './app.js',
   './manifest.json',
-  './logo.png'
+  './logo.png',
+  './html5-qrcode.min.js'
 ];
 
 // Installation du Service Worker et mise en cache des ressources statiques

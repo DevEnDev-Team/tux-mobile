@@ -7,6 +7,7 @@ let syncConfig = {
   apiKey: ''
 };
 let syncIntervalId = null;
+let html5QrCodeScanner = null;
 
 // Palette de couleurs disponibles
 const COLORS = [
@@ -58,10 +59,6 @@ function loadLocalData() {
     }
   }
 
-  // Si on est sur le serveur Go directement, on peut auto-remplir l'URL du serveur si vide
-  if (!syncConfig.serverUrl) {
-    syncConfig.serverUrl = window.location.origin;
-  }
 }
 
 function saveLocalNotes() {
@@ -179,6 +176,10 @@ function setupUIEventListeners() {
       openSettings();
     }
   });
+
+  // Scanner QR Code
+  document.getElementById('startQrScanBtn').addEventListener('click', startQrScan);
+  document.getElementById('stopQrScanBtn').addEventListener('click', stopQrScan);
 }
 
 function generateColorSelector() {
@@ -323,6 +324,7 @@ function openSettings() {
 }
 
 function closeSettings() {
+  stopQrScan();
   document.getElementById('settingsModal').classList.remove('active');
 }
 
@@ -560,4 +562,101 @@ function escapeHtml(string) {
     "'": '&#039;'
   };
   return string.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+// --- Logique du Scanner de QR Code ---
+function startQrScan() {
+  const container = document.getElementById('qrReaderContainer');
+  container.style.display = 'block';
+  
+  if (html5QrCodeScanner) {
+    stopQrScan();
+  }
+  
+  html5QrCodeScanner = new Html5Qrcode("qrReader");
+  
+  const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+    try {
+      let url = "";
+      let key = "";
+      
+      if (decodedText.startsWith('{')) {
+        const data = JSON.parse(decodedText);
+        url = data.url;
+        key = data.key;
+      } else if (decodedText.includes('|')) {
+        const parts = decodedText.split('|');
+        url = parts[0];
+        key = parts[1];
+      } else {
+        throw new Error("Format de QR Code inconnu");
+      }
+      
+      if (!url || !key) {
+        throw new Error("Contenu incomplet dans le QR Code");
+      }
+      
+      // Normaliser l'URL
+      if (url.endsWith('/')) {
+        url = url.slice(0, -1);
+      }
+      
+      // Mettre à jour l'UI et la config
+      document.getElementById('serverUrl').value = url;
+      document.getElementById('apiKey').value = key;
+      document.getElementById('syncEnable').checked = true;
+      document.getElementById('syncFields').classList.add('visible');
+      
+      syncConfig.enabled = true;
+      syncConfig.serverUrl = url;
+      syncConfig.apiKey = key;
+      
+      saveSyncConfig();
+      initSync();
+      stopQrScan();
+      
+      // Petit message visuel
+      alert("Configuration de synchronisation importée avec succès !");
+    } catch (e) {
+      console.error(e);
+      alert("QR Code de synchronisation invalide.");
+    }
+  };
+  
+  const qrCodeErrorCallback = (errorMessage) => {
+    // Les erreurs de scan continu sont normales et peuvent être ignorées (ex: pas de QR code dans le champ de vision)
+  };
+  
+  const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+  
+  html5QrCodeScanner.start(
+    { facingMode: "environment" },
+    config,
+    qrCodeSuccessCallback,
+    qrCodeErrorCallback
+  ).catch(err => {
+    console.error("Impossible de démarrer le scan", err);
+    alert("Erreur de caméra : Veuillez autoriser l'accès à la caméra pour scanner.");
+    stopQrScan();
+  });
+}
+
+function stopQrScan() {
+  const container = document.getElementById('qrReaderContainer');
+  container.style.display = 'none';
+  
+  if (html5QrCodeScanner) {
+    if (html5QrCodeScanner.isScanning) {
+      html5QrCodeScanner.stop().then(() => {
+        html5QrCodeScanner.clear();
+        html5QrCodeScanner = null;
+      }).catch(err => {
+        console.error("Erreur d'arrêt du scan", err);
+        html5QrCodeScanner = null;
+      });
+    } else {
+      html5QrCodeScanner.clear();
+      html5QrCodeScanner = null;
+    }
+  }
 }
