@@ -1,11 +1,11 @@
-const CACHE_NAME = 'tux-it-cache-v15';
+const CACHE_NAME = 'tux-it-cache-v16';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=15',
-  './app.js?v=15',
-  './manifest.json?v=15',
-  './logo.png?v=15',
+  './style.css?v=16',
+  './app.js?v=16',
+  './manifest.json?v=16',
+  './logo.png?v=16',
   './html5-qrcode.min.js'
 ];
 
@@ -33,7 +33,7 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Interception des requêtes (Stratégie Mixte Network-First / Cache-First)
+// Interception des requêtes (Stratégie Mixte Network-First / Cache-First robuste)
 self.addEventListener('fetch', (e) => {
   // Ne pas intercepter les requêtes qui ne sont pas en HTTP ou HTTPS
   if (!e.request.url.startsWith('http://') && !e.request.url.startsWith('https://')) {
@@ -70,6 +70,7 @@ self.addEventListener('fetch', (e) => {
         if (cachedResponse) {
           return cachedResponse;
         }
+        
         return fetch(e.request).then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const responseToCache = networkResponse.clone();
@@ -78,6 +79,10 @@ self.addEventListener('fetch', (e) => {
             });
           }
           return networkResponse;
+        }).catch((err) => {
+          // Gestion des échecs réseau (ex: favicon.ico manquant, 404, connexion coupée)
+          // Évite le crash du Service Worker en retournant une réponse vide
+          return new Response('Ressource indisponible', { status: 503, statusText: 'Service Unavailable' });
         });
       })
     );
