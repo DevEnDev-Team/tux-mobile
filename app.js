@@ -8,6 +8,7 @@ let syncConfig = {
 };
 let syncIntervalId = null;
 let html5QrCodeScanner = null;
+let deletedNotesPendingSync = [];
 
 // Palette de couleurs disponibles
 const COLORS = [
@@ -316,6 +317,11 @@ function deleteActiveNote() {
   if (confirm("Voulez-vous vraiment supprimer cette note ?")) {
     const index = notes.findIndex(n => n.id === activeNote.id);
     if (index !== -1) {
+      // Enregistrer la suppression pour la propager lors de la prochaine synchro
+      if (!deletedNotesPendingSync.includes(activeNote.id)) {
+        deletedNotesPendingSync.push(activeNote.id);
+      }
+
       // Pour une suppression simple et synchro, on retire de la liste
       notes.splice(index, 1);
       saveLocalNotes();
@@ -453,8 +459,11 @@ function triggerSync() {
       return response.json();
     })
     .then(remoteNotes => {
-      // 2. Fusionner les notes locales et distantes
-      const merged = mergeNotes(notes, remoteNotes);
+      // 1.5 Filtrer les notes distantes pour retirer celles qui ont été supprimées localement et sont en attente de synchro
+      const filteredRemote = remoteNotes.filter(rNote => !deletedNotesPendingSync.includes(rNote.id));
+
+      // 2. Fusionner les notes locales et distantes filtrées
+      const merged = mergeNotes(notes, filteredRemote);
       
       // Indiquer si les notes locales ont changé après fusion
       let hasLocalChanges = false;
@@ -517,6 +526,7 @@ function triggerSync() {
           body: JSON.stringify(syncedNotes)
         }).then(response => {
           if (!response.ok) throw new Error("Erreur lors de l'envoi des données");
+          deletedNotesPendingSync = []; // Vider après succès de propagation
           updateSyncStatus('online');
           localStorage.setItem('tux_it_last_sync_time', new Date().toISOString());
           localStorage.setItem('tux_it_last_sync_result', 'success');
@@ -524,6 +534,7 @@ function triggerSync() {
         });
       } else {
         // Pas de changements à pousser, synchro terminée avec succès
+        deletedNotesPendingSync = []; // Vider car résolu
         updateSyncStatus('online');
         localStorage.setItem('tux_it_last_sync_time', new Date().toISOString());
         localStorage.setItem('tux_it_last_sync_result', 'success');
