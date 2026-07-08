@@ -1,12 +1,12 @@
-const CACHE_NAME = 'tux-it-cache-v16';
+const CACHE_NAME = 'tux-it-cache-v26';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=16',
-  './app.js?v=16',
-  './manifest.json?v=16',
-  './logo.png?v=16',
-  './html5-qrcode.min.js'
+  './css/style.css?v=26',
+  './js/app.js?v=26',
+  './manifest.json?v=26',
+  './assets/logo.png?v=26',
+  './js/html5-qrcode.min.js'
 ];
 
 // Installation du Service Worker et mise en cache des ressources statiques
@@ -33,21 +33,31 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Interception des requêtes (Stratégie Mixte Network-First / Cache-First robuste)
+// Interception des requêtes
 self.addEventListener('fetch', (e) => {
+  // 0. Ne pas intercepter les requêtes qui ne sont pas des GET (évite l'erreur sur les POST/PUT/DELETE)
+  if (e.request.method !== 'GET') {
+    return;
+  }
+
   // Ne pas intercepter les requêtes qui ne sont pas en HTTP ou HTTPS
   if (!e.request.url.startsWith('http://') && !e.request.url.startsWith('https://')) {
     return;
   }
 
-  // Ne pas intercepter les requêtes API vers le serveur de synchronisation
-  if (e.request.url.includes('/api/')) {
+  const url = new URL(e.request.url);
+
+  // 1. NE PAS INTERCEPTER l'API de synchronisation (chemin contenant /notes ou /api/)
+  if (url.pathname.includes('/notes') || e.request.url.includes('/notes') || e.request.url.includes('/api/')) {
     return;
   }
 
-  const url = new URL(e.request.url);
+  // 2. NE PAS INTERCEPTER les requêtes cross-origin (vers un autre port ou un autre domaine)
+  if (url.origin !== self.location.origin) {
+    return;
+  }
 
-  // 1. STRATÉGIE NETWORK-FIRST pour la racine et index.html
+  // 3. STRATÉGIE NETWORK-FIRST pour la racine et index.html
   if (url.pathname === '/' || url.pathname === '/index.html') {
     e.respondWith(
       fetch(e.request).then((networkResponse) => {
@@ -64,7 +74,7 @@ self.addEventListener('fetch', (e) => {
       })
     );
   } else {
-    // 2. STRATÉGIE CACHE-FIRST pour les autres ressources statiques (déjà versionnées)
+    // 4. STRATÉGIE CACHE-FIRST pour les autres ressources statiques (déjà versionnées)
     e.respondWith(
       caches.match(e.request).then((cachedResponse) => {
         if (cachedResponse) {
@@ -80,8 +90,6 @@ self.addEventListener('fetch', (e) => {
           }
           return networkResponse;
         }).catch((err) => {
-          // Gestion des échecs réseau (ex: favicon.ico manquant, 404, connexion coupée)
-          // Évite le crash du Service Worker en retournant une réponse vide
           return new Response('Ressource indisponible', { status: 503, statusText: 'Service Unavailable' });
         });
       })

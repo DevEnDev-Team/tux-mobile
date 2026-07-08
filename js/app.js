@@ -377,7 +377,7 @@ function updateDiagnostics() {
   const lastTimeEl = document.getElementById('diagLastTime');
   const jsVerEl = document.getElementById('jsVersion');
   if (jsVerEl) {
-    jsVerEl.textContent = 'v25';
+    jsVerEl.textContent = 'v26';
   }
   
   const lastSync = localStorage.getItem('tux_it_last_sync_time');
