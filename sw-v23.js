@@ -1,11 +1,11 @@
-const CACHE_NAME = 'tux-it-cache-v22';
+const CACHE_NAME = 'tux-it-cache-v23';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=22',
-  './app.js?v=22',
-  './manifest.json?v=22',
-  './logo.png?v=22',
+  './style.css?v=23',
+  './app.js?v=23',
+  './manifest.json?v=23',
+  './logo.png?v=23',
   './html5-qrcode.min.js'
 ];
 
@@ -33,21 +33,26 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Interception des requêtes (Stratégie Mixte Network-First / Cache-First robuste)
+// Interception des requêtes
 self.addEventListener('fetch', (e) => {
   // Ne pas intercepter les requêtes qui ne sont pas en HTTP ou HTTPS
   if (!e.request.url.startsWith('http://') && !e.request.url.startsWith('https://')) {
     return;
   }
 
-  // Ne pas intercepter les requêtes API vers le serveur de synchronisation
-  if (e.request.url.includes('/api/')) {
+  const url = new URL(e.request.url);
+
+  // 1. NE PAS INTERCEPTER l'API de synchronisation (chemin contenant /notes ou /api/)
+  if (url.pathname.includes('/notes') || e.request.url.includes('/notes') || e.request.url.includes('/api/')) {
     return;
   }
 
-  const url = new URL(e.request.url);
+  // 2. NE PAS INTERCEPTER les requêtes cross-origin (vers un autre port ou un autre domaine)
+  if (url.origin !== self.location.origin) {
+    return;
+  }
 
-  // 1. STRATÉGIE NETWORK-FIRST pour la racine et index.html
+  // 3. STRATÉGIE NETWORK-FIRST pour la racine et index.html
   if (url.pathname === '/' || url.pathname === '/index.html') {
     e.respondWith(
       fetch(e.request).then((networkResponse) => {
@@ -64,7 +69,7 @@ self.addEventListener('fetch', (e) => {
       })
     );
   } else {
-    // 2. STRATÉGIE CACHE-FIRST pour les autres ressources statiques (déjà versionnées)
+    // 4. STRATÉGIE CACHE-FIRST pour les autres ressources statiques (déjà versionnées)
     e.respondWith(
       caches.match(e.request).then((cachedResponse) => {
         if (cachedResponse) {
