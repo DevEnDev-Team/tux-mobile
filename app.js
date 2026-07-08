@@ -481,21 +481,54 @@ function triggerSync() {
         renderNotes();
       }
       
-      // 3. Pousser le tableau fusionné sur le serveur (POST)
-      return fetch(`${syncConfig.serverUrl}/notes`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(syncedNotes)
-      });
-    })
-    .then(response => {
-      if (!response.ok) throw new Error("Erreur lors de l'envoi des données");
+      // Détecter s'il y a des changements locaux à pousser vers le serveur (par rapport à remoteNotes)
+      let hasChangesToPush = false;
+      if (merged.length !== remoteNotes.length) {
+        hasChangesToPush = true;
+      } else {
+        for (const mNote of merged) {
+          const rNote = remoteNotes.find(r => r.id === mNote.id);
+          if (!rNote || 
+              rNote.content !== mNote.content || 
+              rNote.color !== mNote.color || 
+              rNote.lastModified !== mNote.lastModified || 
+              rNote.archived !== mNote.archived || 
+              rNote.trashed !== mNote.trashed || 
+              rNote.alwaysOnTop !== mNote.alwaysOnTop ||
+              rNote.locked !== mNote.locked ||
+              rNote.favorite !== mNote.favorite ||
+              rNote.opacity !== mNote.opacity ||
+              rNote.x !== mNote.x ||
+              rNote.y !== mNote.y ||
+              rNote.width !== mNote.width ||
+              rNote.height !== mNote.height ||
+              mNote.synced === false) {
+            hasChangesToPush = true;
+            break;
+          }
+        }
+      }
       
-      // Synchro réussie !
-      updateSyncStatus('online');
-      localStorage.setItem('tux_it_last_sync_time', new Date().toISOString());
-      localStorage.setItem('tux_it_last_sync_result', 'success');
-      updateDiagnostics();
+      // 3. Pousser le tableau fusionné sur le serveur (POST) uniquement s'il y a des changements
+      if (hasChangesToPush) {
+        return fetch(`${syncConfig.serverUrl}/notes`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(syncedNotes)
+        }).then(response => {
+          if (!response.ok) throw new Error("Erreur lors de l'envoi des données");
+          updateSyncStatus('online');
+          localStorage.setItem('tux_it_last_sync_time', new Date().toISOString());
+          localStorage.setItem('tux_it_last_sync_result', 'success');
+          updateDiagnostics();
+        });
+      } else {
+        // Pas de changements à pousser, synchro terminée avec succès
+        updateSyncStatus('online');
+        localStorage.setItem('tux_it_last_sync_time', new Date().toISOString());
+        localStorage.setItem('tux_it_last_sync_result', 'success');
+        updateDiagnostics();
+      }
     })
     .catch(err => {
       console.error("Erreur de synchronisation", err);
