@@ -1,11 +1,11 @@
-const CACHE_NAME = 'tux-it-cache-v23';
+const CACHE_NAME = 'tux-it-cache-v24';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=23',
-  './app.js?v=23',
-  './manifest.json?v=23',
-  './logo.png?v=23',
+  './style.css?v=24',
+  './app.js?v=24',
+  './manifest.json?v=24',
+  './logo.png?v=24',
   './html5-qrcode.min.js'
 ];
 
@@ -35,6 +35,11 @@ self.addEventListener('activate', (e) => {
 
 // Interception des requêtes
 self.addEventListener('fetch', (e) => {
+  // 0. Ne pas intercepter les requêtes qui ne sont pas des GET (évite l'erreur sur les POST/PUT/DELETE)
+  if (e.request.method !== 'GET') {
+    return;
+  }
+
   // Ne pas intercepter les requêtes qui ne sont pas en HTTP ou HTTPS
   if (!e.request.url.startsWith('http://') && !e.request.url.startsWith('https://')) {
     return;
