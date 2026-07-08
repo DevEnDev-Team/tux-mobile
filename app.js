@@ -80,8 +80,8 @@ function renderNotes() {
   
   grid.innerHTML = '';
   
-  // Filtrer les notes actives (non archivées et non supprimées)
-  let filtered = notes.filter(n => !n.archived && !n.trashed);
+  // Filtrer les notes actives (non supprimées)
+  let filtered = notes.filter(n => !n.trashed);
   
   // Appliquer le filtre de recherche si saisi
   if (searchQuery) {
@@ -377,7 +377,7 @@ function updateDiagnostics() {
   const lastTimeEl = document.getElementById('diagLastTime');
   const jsVerEl = document.getElementById('jsVersion');
   if (jsVerEl) {
-    jsVerEl.textContent = 'v24';
+    jsVerEl.textContent = 'v25';
   }
   
   const lastSync = localStorage.getItem('tux_it_last_sync_time');
