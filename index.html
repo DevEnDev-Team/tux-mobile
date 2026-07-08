@@ -209,7 +209,7 @@
           </div>
           <div class="diag-item">
             <span>Version de l'app :</span>
-            <strong id="diagVersion">v21</strong>
+            <strong id="diagVersion">HTML v22 | JS <span id="jsVersion">-</span></strong>
           </div>
         </div>
       </div>
@@ -218,10 +218,10 @@
 
   <!-- Scripts -->
   <script src="html5-qrcode.min.js"></script>
-  <script src="app.js?v=21"></script>
+  <script src="app.js?v=22"></script>
   <script>
     // Version applicative pour forcer le nettoyage du Service Worker si elle change
-    const APP_VERSION = '21';
+    const APP_VERSION = '22';
 
     if ('serviceWorker' in navigator) {
       const savedVersion = localStorage.getItem('tux_it_version');
@@ -251,11 +251,11 @@
         });
 
         window.addEventListener('load', () => {
-          // Nettoyer activement les anciennes versions de SW qui ne s'appellent pas sw-v21.js
+          // Nettoyer activement les anciennes versions de SW qui ne s'appellent pas sw-v22.js
           navigator.serviceWorker.getRegistrations().then((registrations) => {
             const promises = registrations.map((registration) => {
               const scriptURL = registration.active ? registration.active.scriptURL : (registration.installing ? registration.installing.scriptURL : '');
-              if (scriptURL && !scriptURL.includes('sw-v21.js')) {
+              if (scriptURL && !scriptURL.includes('sw-v22.js')) {
                 console.log("Désinscription de l'ancien Service Worker :", scriptURL);
                 return registration.unregister();
               }
@@ -264,9 +264,9 @@
 
             Promise.all(promises).then(() => {
               // Enregistrer le nouveau Service Worker versionné
-              navigator.serviceWorker.register('./sw-v21.js')
+              navigator.serviceWorker.register('./sw-v22.js')
                 .then((reg) => {
-                  console.log('Service Worker v21 enregistré !', reg.scope);
+                  console.log('Service Worker v22 enregistré !', reg.scope);
                   reg.update();
                 })
                 .catch((err) => console.log('Échec de l\'enregistrement du Service Worker :', err));
