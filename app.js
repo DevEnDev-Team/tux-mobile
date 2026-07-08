@@ -518,7 +518,12 @@ function mergeNotes(local, remote) {
   local.forEach(l => {
     const r = mergedMap.get(l.id);
     if (!r) {
-      mergedMap.set(l.id, l); // Note uniquement locale
+      // Note uniquement locale
+      // Si elle a déjà été synchronisée (l.synced !== false), cela signifie qu'elle a été supprimée sur un autre poste.
+      // Sinon, c'est une nouvelle note locale créée hors-ligne.
+      if (l.synced === false) {
+        mergedMap.set(l.id, l);
+      }
     } else {
       // Comparer les timestamps
       const lDate = new Date(l.lastModified);
