@@ -157,6 +157,7 @@ function setupUIEventListeners() {
     boldBtn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       document.execCommand('bold', false, null);
+      updateToolbarButtonStates();
     });
   }
 
@@ -175,9 +176,19 @@ function setupUIEventListeners() {
       btn.addEventListener('mousedown', (e) => {
         e.preventDefault();
         document.execCommand(action.cmd, false, null);
+        updateToolbarButtonStates();
       });
     }
   });
+
+  // Événements pour mettre à jour l'état des boutons de formatage au clavier/souris/tactile
+  const noteTextarea = document.getElementById('noteTextarea');
+  if (noteTextarea) {
+    noteTextarea.addEventListener('keyup', updateToolbarButtonStates);
+    noteTextarea.addEventListener('mouseup', updateToolbarButtonStates);
+    noteTextarea.addEventListener('focus', updateToolbarButtonStates);
+  }
+  document.addEventListener('selectionchange', updateToolbarButtonStates);
   
   // Bouton de suppression de l'éditeur
   document.getElementById('editorDeleteBtn').addEventListener('click', deleteActiveNote);
@@ -281,6 +292,9 @@ function openEditor(note) {
     dropdown.classList.remove('active');
   }
   
+  // Mettre à jour l'état des boutons de formatage
+  updateToolbarButtonStates();
+  
   modal.classList.add('active');
 }
 
@@ -311,6 +325,35 @@ function updateColorPickerButton(color) {
     btn.style.setProperty('--btn-color', color);
     btn.style.setProperty('--dark-color', darkenColor(color, 25));
   }
+}
+
+function updateToolbarButtonStates() {
+  const activeEditor = document.getElementById('editorModal').classList.contains('active');
+  if (!activeEditor) return;
+
+  const states = [
+    { id: 'boldBtn', cmd: 'bold' },
+    { id: 'italicBtn', cmd: 'italic' },
+    { id: 'underlineBtn', cmd: 'underline' },
+    { id: 'strikeBtn', cmd: 'strikeThrough' },
+    { id: 'bulletListBtn', cmd: 'insertUnorderedList' },
+    { id: 'numberListBtn', cmd: 'insertOrderedList' }
+  ];
+
+  states.forEach(state => {
+    const btn = document.getElementById(state.id);
+    if (btn) {
+      try {
+        if (document.queryCommandState(state.cmd)) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      } catch (e) {
+        btn.classList.remove('active');
+      }
+    }
+  });
 }
 
 function updatePaletteSelection(selectedColor) {
@@ -441,7 +484,7 @@ function updateDiagnostics() {
   const lastTimeEl = document.getElementById('diagLastTime');
   const jsVerEl = document.getElementById('jsVersion');
   if (jsVerEl) {
-    jsVerEl.textContent = 'v28';
+    jsVerEl.textContent = 'v29';
   }
   
   const lastSync = localStorage.getItem('tux_it_last_sync_time');

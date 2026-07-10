@@ -472,8 +472,14 @@ body {
   transition: background-color 0.2s, transform 0.1s;
 }
 
-.toolbar-btn:active, .toolbar-btn.active {
+.toolbar-btn:active {
   background-color: rgba(0, 0, 0, 0.12);
+  transform: scale(0.95);
+}
+
+.toolbar-btn.active {
+  background-color: var(--primary-color) !important;
+  color: #ffffff !important;
   transform: scale(0.95);
 }
 
