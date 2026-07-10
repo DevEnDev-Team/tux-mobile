@@ -10,22 +10,22 @@
   <meta name="theme-color" content="#7c4dff">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="assets/logo.png?v=27">
-  <link rel="manifest" href="manifest.json?v=27">
+  <link rel="apple-touch-icon" href="assets/logo.png?v=28">
+  <link rel="manifest" href="manifest.json?v=28">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   
-  <link rel="stylesheet" href="css/style.css?v=27">
+  <link rel="stylesheet" href="css/style.css?v=28">
 </head>
 <body>
 
   <!-- Écran de chargement initial -->
   <div id="splashScreen" class="splash-screen">
     <div class="splash-content">
-      <img src="assets/logo.png?v=27" alt="Tux-It Logo" class="splash-logo">
+      <img src="assets/logo.png?v=28" alt="Tux-It Logo" class="splash-logo">
       <h1 class="splash-title">Tux-It</h1>
       <div class="spinner"></div>
     </div>
@@ -37,7 +37,7 @@
     <!-- En-tête -->
     <header class="app-header">
       <div class="header-left">
-        <img src="assets/logo.png?v=27" alt="Logo" class="header-logo">
+        <img src="assets/logo.png?v=28" alt="Logo" class="header-logo">
         <span class="header-title">Tux-It</span>
       </div>
       <div class="header-right">
@@ -124,14 +124,59 @@
               <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
             </svg>
           </button>
+          <button type="button" id="italicBtn" class="toolbar-btn" title="Mettre en italique">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="4" x2="10" y2="4"/>
+              <line x1="14" y1="20" x2="5" y2="20"/>
+              <line x1="15" y1="4" x2="9" y2="20"/>
+            </svg>
+          </button>
+          <button type="button" id="underlineBtn" class="toolbar-btn" title="Souligner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"/>
+              <line x1="4" y1="21" x2="20" y2="21"/>
+            </svg>
+          </button>
+          <button type="button" id="strikeBtn" class="toolbar-btn" title="Barrer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 4H9a4 4 0 0 0-4 4 4 4 0 0 0 4 4h6a4 4 0 0 1 4 4 4 4 0 0 1-4 4H7"/>
+              <line x1="4" y1="12" x2="20" y2="12"/>
+            </svg>
+          </button>
+          <div class="toolbar-separator"></div>
+          <button type="button" id="bulletListBtn" class="toolbar-btn" title="Liste à puces">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6"/>
+              <line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+          </button>
+          <button type="button" id="numberListBtn" class="toolbar-btn" title="Liste numérotée">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="10" y1="6" x2="21" y2="6"/>
+              <line x1="10" y1="12" x2="21" y2="12"/>
+              <line x1="10" y1="18" x2="21" y2="18"/>
+              <path d="M4 6h1v4"/>
+              <path d="M4 10h2"/>
+              <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>
+            </svg>
+          </button>
+          <div class="toolbar-separator"></div>
+          <div class="color-picker-container">
+            <button type="button" id="colorPickerBtn" class="toolbar-btn color-picker-btn" title="Changer la couleur">
+              <span class="color-indicator"></span>
+            </button>
+            <div id="colorDropdown" class="color-dropdown">
+              <!-- Les boutons de couleurs seront générés ici -->
+            </div>
+          </div>
         </div>
         <div id="noteTextarea" contenteditable="true" placeholder="Écrivez votre note ici..."></div>
         
-        <!-- Palette de couleurs -->
-        <div class="color-palette-label">Couleur de fond</div>
-        <div class="color-selector" id="colorSelector">
-          <!-- Les boutons de couleurs seront générés ici -->
-        </div>
+
       </div>
       
       <div class="sheet-footer">
@@ -209,7 +254,7 @@
           </div>
           <div class="diag-item">
             <span>Version de l'app :</span>
-            <strong id="diagVersion">HTML v27 | JS <span id="jsVersion">-</span></strong>
+             <strong id="diagVersion">HTML v28 | JS <span id="jsVersion">-</span></strong>
           </div>
         </div>
       </div>
@@ -218,10 +263,10 @@
 
   <!-- Scripts -->
   <script src="js/html5-qrcode.min.js"></script>
-  <script src="js/app.js?v=27"></script>
+  <script src="js/app.js?v=28"></script>
   <script>
     // Version applicative pour forcer le nettoyage du Service Worker si elle change
-    const APP_VERSION = '27';
+    const APP_VERSION = '28';
 
     if ('serviceWorker' in navigator) {
       const savedVersion = localStorage.getItem('tux_it_version');
@@ -251,11 +296,11 @@
         });
 
         window.addEventListener('load', () => {
-          // Nettoyer activement les anciennes versions de SW qui ne s'appellent pas sw-v27.js
+          // Nettoyer activement les anciennes versions de SW qui ne s'appellent pas sw-v28.js
           navigator.serviceWorker.getRegistrations().then((registrations) => {
             const promises = registrations.map((registration) => {
               const scriptURL = registration.active ? registration.active.scriptURL : (registration.installing ? registration.installing.scriptURL : '');
-              if (scriptURL && !scriptURL.includes('sw-v27.js')) {
+              if (scriptURL && !scriptURL.includes('sw-v28.js')) {
                 console.log("Désinscription de l'ancien Service Worker :", scriptURL);
                 return registration.unregister();
               }
@@ -264,9 +309,9 @@
 
             Promise.all(promises).then(() => {
               // Enregistrer le nouveau Service Worker versionné
-              navigator.serviceWorker.register('./sw-v27.js')
+              navigator.serviceWorker.register('./sw-v28.js')
                 .then((reg) => {
-                  console.log('Service Worker v27 enregistré !', reg.scope);
+                  console.log('Service Worker v28 enregistré !', reg.scope);
                   reg.update();
                 })
                 .catch((err) => console.log('Échec de l\'enregistrement du Service Worker :', err));

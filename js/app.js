@@ -159,6 +159,25 @@ function setupUIEventListeners() {
       document.execCommand('bold', false, null);
     });
   }
+
+  // Autres boutons de formatage (Italique, Souligné, Barré, Listes)
+  const formatActions = [
+    { id: 'italicBtn', cmd: 'italic' },
+    { id: 'underlineBtn', cmd: 'underline' },
+    { id: 'strikeBtn', cmd: 'strikeThrough' },
+    { id: 'bulletListBtn', cmd: 'insertUnorderedList' },
+    { id: 'numberListBtn', cmd: 'insertOrderedList' }
+  ];
+
+  formatActions.forEach(action => {
+    const btn = document.getElementById(action.id);
+    if (btn) {
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        document.execCommand(action.cmd, false, null);
+      });
+    }
+  });
   
   // Bouton de suppression de l'éditeur
   document.getElementById('editorDeleteBtn').addEventListener('click', deleteActiveNote);
@@ -193,6 +212,25 @@ function setupUIEventListeners() {
   document.getElementById('startQrScanBtn').addEventListener('click', startQrScan);
   document.getElementById('stopQrScanBtn').addEventListener('click', stopQrScan);
 
+  // Sélecteur de couleur (dropdown dans la barre d'outils)
+  const colorPickerBtn = document.getElementById('colorPickerBtn');
+  const colorDropdown = document.getElementById('colorDropdown');
+  if (colorPickerBtn && colorDropdown) {
+    colorPickerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      colorDropdown.classList.toggle('active');
+    });
+  }
+
+  // Fermer le dropdown de couleur si on clique en dehors
+  document.addEventListener('click', (e) => {
+    if (colorDropdown && colorDropdown.classList.contains('active')) {
+      if (!colorDropdown.contains(e.target) && e.target !== colorPickerBtn && !colorPickerBtn.contains(e.target)) {
+        colorDropdown.classList.remove('active');
+      }
+    }
+  });
+
   // Changement de thème
   const themeToggleBtn = document.getElementById('themeToggleBtn');
   if (themeToggleBtn) {
@@ -201,7 +239,8 @@ function setupUIEventListeners() {
 }
 
 function generateColorSelector() {
-  const container = document.getElementById('colorSelector');
+  const container = document.getElementById('colorDropdown');
+  if (!container) return;
   container.innerHTML = '';
   
   COLORS.forEach(color => {
@@ -214,7 +253,10 @@ function generateColorSelector() {
     btn.style.setProperty('--btn-color', color);
     btn.style.setProperty('--dark-color', darkenColor(color, 25)); // 25% plus sombre
     
-    btn.addEventListener('click', () => selectEditorColor(color));
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectEditorColor(color);
+    });
     container.appendChild(btn);
   });
 }
@@ -229,8 +271,15 @@ function openEditor(note) {
   textarea.innerHTML = getEditableHtml(activeNote.content);
   sheet.style.backgroundColor = activeNote.color;
   
-  // Activer la couleur sélectionnée dans la palette
+  // Activer la couleur sélectionnée dans la palette et mettre à jour le bouton
   updatePaletteSelection(activeNote.color);
+  updateColorPickerButton(activeNote.color);
+  
+  // Masquer le dropdown de couleurs
+  const dropdown = document.getElementById('colorDropdown');
+  if (dropdown) {
+    dropdown.classList.remove('active');
+  }
   
   modal.classList.add('active');
 }
@@ -246,6 +295,21 @@ function selectEditorColor(color) {
     const modal = document.getElementById('editorModal');
     modal.querySelector('.bottom-sheet').style.backgroundColor = color;
     updatePaletteSelection(color);
+    updateColorPickerButton(color);
+    
+    // Fermer le dropdown de couleur
+    const dropdown = document.getElementById('colorDropdown');
+    if (dropdown) {
+      dropdown.classList.remove('active');
+    }
+  }
+}
+
+function updateColorPickerButton(color) {
+  const btn = document.getElementById('colorPickerBtn');
+  if (btn) {
+    btn.style.setProperty('--btn-color', color);
+    btn.style.setProperty('--dark-color', darkenColor(color, 25));
   }
 }
 
@@ -377,7 +441,7 @@ function updateDiagnostics() {
   const lastTimeEl = document.getElementById('diagLastTime');
   const jsVerEl = document.getElementById('jsVersion');
   if (jsVerEl) {
-    jsVerEl.textContent = 'v27';
+    jsVerEl.textContent = 'v28';
   }
   
   const lastSync = localStorage.getItem('tux_it_last_sync_time');
@@ -595,16 +659,36 @@ function generateUuid() {
 
 function getPlainText(htmlContent) {
   if (!htmlContent) return '';
-  // Remplacement basique du HTML (Qt6 C++ envoie du Rich Text). Si texte brut, retourne tel quel.
+  
+  // Si ce n'est pas du HTML, inutile de le parser
+  if (!/<\/?[a-zA-Z][^>]*>/.test(htmlContent)) {
+    return htmlContent;
+  }
+  
   const temp = document.createElement('div');
   temp.innerHTML = htmlContent;
-  return temp.textContent || temp.innerText || '';
+  
+  // Remplacer les <br> par des sauts de ligne réels et ajouter un saut de ligne
+  // à la fin des éléments de bloc pour que le texte ne soit pas collé.
+  const blocks = temp.querySelectorAll('p, div, li, br, h1, h2, h3, h4, h5, h6');
+  blocks.forEach(block => {
+    if (block.tagName.toLowerCase() === 'br') {
+      block.replaceWith(document.createTextNode('\n'));
+    } else {
+      block.appendChild(document.createTextNode('\n'));
+    }
+  });
+  
+  const text = temp.textContent || temp.innerText || '';
+  return text.trim();
 }
 
 function getEditableHtml(htmlContent) {
   if (!htmlContent) return '';
-  // Si c'est du texte brut sans balises d'édition complexes, on remplace les sauts de ligne par des <br>
-  if (!htmlContent.includes('<html') && !htmlContent.includes('<body') && !htmlContent.includes('<p') && !htmlContent.includes('<span') && !htmlContent.includes('<div')) {
+  
+  // Utiliser une RegEx pour détecter s'il y a des tags HTML quelconques
+  const hasHtmlTags = /<\/?[a-zA-Z][^>]*>/.test(htmlContent);
+  if (!hasHtmlTags) {
     return htmlContent.replace(/\n/g, '<br>');
   }
   

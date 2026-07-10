@@ -482,6 +482,14 @@ body {
   height: 20px;
 }
 
+.toolbar-separator {
+  width: 1px;
+  height: 24px;
+  background-color: rgba(0, 0, 0, 0.1);
+  align-self: center;
+  margin: 0 4px;
+}
+
 #noteTextarea {
   flex: 1;
   background: none;
@@ -497,27 +505,69 @@ body {
   -webkit-user-select: text;
 }
 
+#noteTextarea ul, #noteTextarea ol {
+  padding-left: 24px !important;
+  margin: 8px 0 !important;
+}
+
+#noteTextarea ul {
+  list-style-type: disc !important;
+}
+
+#noteTextarea ol {
+  list-style-type: decimal !important;
+}
+
+#noteTextarea li {
+  margin-bottom: 4px !important;
+}
+
 #noteTextarea:empty::before {
   content: attr(placeholder);
   color: rgba(0, 0, 0, 0.4);
   pointer-events: none;
 }
 
-.color-palette-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.5);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.color-picker-container {
+  position: relative;
 }
 
-.color-selector {
+.color-picker-btn {
+  border-radius: 50% !important;
+  padding: 0;
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 4px;
-  overflow-x: auto;
   align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(0, 0, 0, 0.15) !important;
+  background: white !important;
+  cursor: pointer;
+}
+
+.color-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--btn-color, #fff59d);
+  display: block;
+}
+
+.color-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 4px 16px var(--dialog-shadow);
+  z-index: 100;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.color-dropdown.active {
+  display: flex;
 }
 
 .color-btn {
