@@ -1,11 +1,11 @@
-const CACHE_NAME = 'tux-it-cache-v29';
+const CACHE_NAME = 'tux-it-cache-v30';
 const ASSETS = [
   './',
   './index.html',
-  './css/style.css?v=29',
-  './js/app.js?v=29',
-  './manifest.json?v=29',
-  './assets/logo.png?v=29',
+  './css/style.css?v=30',
+  './js/app.js?v=30',
+  './manifest.json?v=30',
+  './assets/logo.png?v=30',
   './js/html5-qrcode.min.js'
 ];
 

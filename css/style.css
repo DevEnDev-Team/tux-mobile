@@ -483,6 +483,10 @@ body {
   transform: scale(0.95);
 }
 
+.toolbar-btn.active svg {
+  stroke: #ffffff !important;
+}
+
 .toolbar-btn svg {
   width: 20px;
   height: 20px;
