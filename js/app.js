@@ -708,22 +708,28 @@ function getPlainText(htmlContent) {
     return htmlContent;
   }
   
-  const temp = document.createElement('div');
-  temp.innerHTML = htmlContent;
-  
-  // Remplacer les <br> par des sauts de ligne réels et ajouter un saut de ligne
-  // à la fin des éléments de bloc pour que le texte ne soit pas collé.
-  const blocks = temp.querySelectorAll('p, div, li, br, h1, h2, h3, h4, h5, h6');
-  blocks.forEach(block => {
-    if (block.tagName.toLowerCase() === 'br') {
-      block.replaceWith(document.createTextNode('\n'));
-    } else {
-      block.appendChild(document.createTextNode('\n'));
-    }
-  });
-  
-  const text = temp.textContent || temp.innerText || '';
-  return text.trim();
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    const temp = doc.body;
+    
+    // Remplacer les <br> par des sauts de ligne réels et ajouter un saut de ligne
+    // à la fin des éléments de bloc pour que le texte ne soit pas collé.
+    const blocks = temp.querySelectorAll('p, div, li, br, h1, h2, h3, h4, h5, h6');
+    blocks.forEach(block => {
+      if (block.tagName.toLowerCase() === 'br') {
+        block.replaceWith(document.createTextNode('\n'));
+      } else {
+        block.appendChild(document.createTextNode('\n'));
+      }
+    });
+    
+    const text = temp.textContent || temp.innerText || '';
+    return text.trim();
+  } catch (e) {
+    console.error("Erreur de parsing HTML", e);
+    return htmlContent;
+  }
 }
 
 function getEditableHtml(htmlContent) {
